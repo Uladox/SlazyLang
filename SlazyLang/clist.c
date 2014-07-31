@@ -3,9 +3,8 @@
 #include <string.h>
 #include <ctype.h>
 
-struct node{
-	int x;
-	int y;
+struct node
+{
 	struct node *hor;
 	struct node *ver;
 	char *str;
@@ -23,6 +22,14 @@ void set_node(struct node *argnode, const char *value)
 	}
 }
 
+struct node *add_node(struct node *argnode)
+{
+	if (argnode->ver == NULL){
+		argnode->ver = malloc(sizeof(struct node));
+	} else {
+		argnode->ver = realloc(argnode->ver, sizeof(struct node));
+	}
+}
 //makes first string exactly equivalent (size and content) to second
 void str_new(char *argstr, const char *value)
 {
@@ -30,7 +37,6 @@ void str_new(char *argstr, const char *value)
 		argstr =  malloc(strlen(value));
 		strcpy(argstr, value);
 	} else {
-		//	char *tempstr = argstr;
 		if ((argstr =  realloc(argstr, strlen(value))) == NULL){
 			printf("Error: yo out of memory!");
 			exit(EXIT_FAILURE);
@@ -46,49 +52,79 @@ char *rmv_spc(char* argstr)
 	char *rstpnt = argstr;
 	while (isspace(*argstr))
 		argstr++;	
-        char* tempstr = (char *) malloc(strlen(argstr));
+        char *tempstr = malloc(strlen(argstr) + 1);	
 	strcpy(tempstr, argstr);
 	argstr = rstpnt;
 	return tempstr;
 }
 
+//returns first section of string before first whitespace
 char *spc_slt(char* argstr)
 {
 	char *rstpnt = argstr;
-	while (!isspace(*argstr))
+	while (!isspace(*argstr) && (*argstr) != '\0')
 		argstr++;
 	int token_s = strlen(rstpnt) - strlen(argstr);
-        char* tempstr =  malloc(token_s);
+        char* tempstr =  malloc(token_s + 1);
 	argstr = rstpnt;
 	strncpy(tempstr, argstr, token_s);
 	return tempstr;
 }
 
+//cuts off size from beggining of string
 void rem_str_ft(char *argstr, int size)
 {
-	char *tempstr = argstr;
+	char *tempstr = malloc(strlen(argstr) - size);
 	int i;
 	for (i = 0; i != size; i++)
-		tempstr++;
-	int temp_size = strlen(tempstr);
-	strncpy(argstr, tempstr, temp_size);
-	argstr = realloc(argstr, temp_size);
-}
-char *eval(char* argstr)
-{
-	char* tempstr = argstr;
-	tempstr = rmv_spc(tempstr);
+		argstr++;
+	int e = strlen(argstr);
+	for (i = 0; i != e; i++)
+		*tempstr++ = *argstr++;
 	str_new(argstr, tempstr);
-	char *tempstr2;
-	tempstr2 = spc_slt(tempstr);
-	free(tempstr);
-	rem_str_ft(argstr, strlen(argstr) - strlen(tempstr2));
-	return tempstr2;
+//	free(tempstr);
 }
+//gets rid of first token and returns it
+char *rip_tok(char* argstr)
+{
+	if(strlen(argstr) == 0){
+		return NULL;
+	} else {
+		char* tempstr;
+		char *tempstr2;
+		tempstr =  rmv_spc(argstr);
+		if(strlen(tempstr) == 0){
+//			free(tempstr);
+			return NULL;
+		}
+		str_new(argstr, tempstr);
+//		free(tempstr);
+		tempstr2 = spc_slt(argstr);
+		rem_str_ft(argstr, strlen(tempstr2));
+		return tempstr2;
+	}		
+}
+
+
+
 main()
 {
-	char *a = malloc(100);
-        strcpy(a, "  df  ghv fg"); 
-	printf("%s\n", eval(a));
-	printf("%s\n", a);
+	char *a = malloc(10);
+        strcpy(a, "    a b c"); 
+/*
+	char *b = rip_tok(a);
+	while (b!= NULL) {
+		printf("%s\n", b);
+		b = rip_tok(a);
+	}
+	printf("%s", a);
+*/
+	char *b = rmv_spc(a);
+	char *c = spc_slt(b);
+	printf("%s", c);
+//	rem_str_ft(a, strlen(spc_slt(rmv_spc(a))));
+//	printf("%s", spc_slt(rmv_spc(a)));
+	free(a);
+	free(b);
+	free(c);
 }
