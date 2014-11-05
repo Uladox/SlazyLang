@@ -1,5 +1,15 @@
-%define ptrsize 4
-%define ptrword dword
+;;|
+;;[]-[]-[] 
+;; |     |
+;; car   []
+;; 
+%define ptrsize 8
+%define ptrword qword
+%define pax rax
+%define pbx rbx
+%define pcx rcx
+%define pdx rdx
+
 %define atomType 0
 %define listType 1
 %define functionType 2
@@ -25,11 +35,11 @@
 %endmacro
 
 %macro setargs 1
-	mov eax, %1		;eax is standard argument holder
+	mov pax, %1		;pax is standard argument holder
 %endmacro
 
 %macro SYSEXIT 0
-	mov	eax, 1		;Sys call for exit
+	mov	pax, 1		;Sys call for exit
 	int	0x80		;Call kernel
 %endmacro
 
@@ -67,81 +77,120 @@ section .bss
 	;; end required
 	mycell resb sizeof(cell)
 	myatom resb sizeof(atom)
-	t1 resb ptrsize
 	mycell2 resb sizeof(cell)
 	myatom2 resb sizeof(atom)
+	mycell3 resb sizeof(cell)
 	myatom3 resb sizeof(atom)
+	mycell4 resb sizeof(cell)
+	myatom4 resb sizeof(atom)
+	
+	mycell5 resb sizeof(cell)
+	myatom5 resb sizeof(atom)
+	mycell6 resb sizeof(cell)
+	myatom6 resb sizeof(atom)
+	mycell7 resb sizeof(cell)
+	myatom7 resb sizeof(atom)
+	mycell8 resb sizeof(cell)
+	myatom8 resb sizeof(atom)
 
 section	.text
     global _start 
 
 _start:
 	mov ptrword [heldptr], heldplace
-	
-	movatom myatom, print
-	movcell mycell, myatom
-	movtype myatom, t1
-	movnxt mycell, mycell2
-	movcell mycell2, myatom2
-	movatom myatom2, msg
-	
-	movatom myatom3, mycell
 
-	setargs myatom3
+	movatom myatom, mycell
+	movcell mycell, myatom2
+	movatom myatom2, print
+	movnxt mycell, mycell2
+	movcell mycell2, myatom3
+	movatom myatom3, mycell3
+	movcell mycell3, myatom4
+	movatom myatom4, car
+	movnxt mycell3, mycell4
+	movcell mycell4, myatom5
+	movatom myatom5, mycell5
+	movcell mycell5, myatom6
+	movatom myatom6, quote
+	movnxt mycell5, mycell6
+	movcell mycell6, myatom7
+	movatom myatom7, mycell7
+	movcell mycell7, myatom8
+	movatom myatom8, msg
+	setargs myatom
 	call eval
+	;; call eval
 	SYSEXIT
 
+eval:					;takes atom containing cell and evaluates it
 
-eval:					;takes atom containing list and evaluates it
-	;; NOTE ECX ESI EDI ARE SAFE FROM EVAL, DO NOT USE EAX EBX EDX AND EXPECT THEM NOT TO CHANGE AFTER CALLING EVAL
 	add ptrword [heldptr], ptrsize 	;go to next avaliable pointer so as to hold arg making it uneffected by called functions
-	mov ptrword [heldptr], eax	;arg is always preserved, it is the thing to replace its value with
+	mov [heldptr], pax	;pax should always be an atom that is to have it value replaced by the evaluation
 
-	atomhere eax		;set args to first cell of list ([a] b c d) where eax goes from (a b c d) to [a]
-	;; function must manually go from [a] to [b] in list, thus eax must remain as a cell. It points to affter eval to the function being called
-	mov ebx, eax		;move value of eax into ebx
-	cellhere ebx		;set ebx to its 'here' value meaning it only is a type and a value (no position, atom) ebx should be function
-	macval ebx 		;use macro to call function held by atom held in ebx
+	atomhere pax		;set args to first cell of list ([a] b c d) where pax goes from (a b c d) to [a]
+	mov pbx, pax		;move value of pax into pbx
+	cellhere pbx		;gets the atom in list that the function is in
+	;; function must manually go from [a] to [b] in list, thus pax must remain as a cell.
+	macval pbx 		;use macro to call function held by atom held in ebx
 	;; change expression so value is changed
-	mov edx, [heldptr]
-	movatom edx, eax	;sets value of edx to whatever function returned
+
+	mov pdx, [heldptr]
+	movatom pdx, pax	;sets value of pdx to whatever function returned
 	;; so for the expression ( (func a b c) d e f) goes to (returnedValue, d e f)
 	sub ptrword [heldptr], ptrsize ;important so next eval gets its proper argpointer to replace with returned value
+
 	ret
-	
+quote:
+	cellnext pax
+	atomhere pax
+	ret
+car:
+
+	cellnext pax		;get arg2 which is a list
+	cellhere pax		;get the list (atom) from its cell
+	setargs pax		;evaluate the list
+	call eval
+	;; should return an atom pointing to a cell, so return an atom pointing to thing in cell
+	atomhere pax
+	cellhere pax
+
+	ret
 print:
 
-	cellnext eax		;move from function to first arg from function
-	cellhere eax		;gets atom held by eax
-	atomhere eax	        ;put value (string) of first arg in eax
-	mov ecx, eax		;move value of first arg into ecx
-	call setlen		;find length of ecx and put size in ebx
-	mov edx, ebx 		;puts size in edx	
-	mov ebx, 1
-	mov eax, 4
+	cellnext pax		;move from function to first arg from function
+	cellhere pax		;gets atom held by pax
+	setargs pax
+	call eval
+	atomhere pax
+	mov pcx, pax		;move value of first arg into pcx
+	call setlen		;find length of pcx and put size in ebx
+	mov pdx, pbx 		;puts size in pdx	
+	mov pbx, 1
+	mov pax, 4
 	int 0x80		;call kernel
 
 	ret
 
-setlen:				;puts str from eax in ecx and size in in ebx
-	mov ebx, 0
-	mov eax, ecx		;preserves string so ptr is put into ecx
+setlen:				;puts str from pax in pcx and size in in ebx
+	mov pbx, 0
+	mov pax, pcx		;preserves string so ptr is put into pcx
 	call lenth		;start counting
 	ret
 lenth:				;its not misspelled, it is program shortspeak
-	cmp byte [eax], 0	;checks if char is 0
+	cmp byte [pax], 0	;checks if char is 0
 	je l1			;if so jump to l1 (return)
-	jmp l2			;else jump to l2 and inc counter (ebx)
+	jmp l2			;else jump to l2 and inc counter (pbx)
 l1:
 	ret
 
 l2:
-	inc ebx
-	add eax, 1		;go to next char
+	inc pbx
+	add pax, 1		;go to next char
 	jmp lenth		;repeat until 0
 
 section	.data
 
 msg	db	'hi!', 10, 0
 
+ 
  
