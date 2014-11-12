@@ -72,7 +72,7 @@ endstruc
 
 section .bss
 	;; stuff needed for counting pointers in eval
-	heldplace resb (16 * ptrsize)
+	heldplace resb (64 * ptrsize)
 	heldptr resb ptrsize
 	;; end required
 	mycell resb sizeof(cell)
@@ -92,6 +92,12 @@ section .bss
 	myatom7 resb sizeof(atom)
 	mycell8 resb sizeof(cell)
 	myatom8 resb sizeof(atom)
+	mycell9 resb sizeof(cell)
+	myatom9 resb sizeof(atom)
+	mycell10 resb sizeof(cell)
+	myatom10 resb sizeof(atom)
+	mycell11 resb sizeof(cell)
+	myatom11 resb sizeof(atom)
 
 section	.text
     global _start 
@@ -102,50 +108,59 @@ _start:
 	movatom myatom, mycell
 	movcell mycell, myatom2
 	movatom myatom2, print
+
 	movnxt mycell, mycell2
+
 	movcell mycell2, myatom3
 	movatom myatom3, mycell3
 	movcell mycell3, myatom4
 	movatom myatom4, car
+
 	movnxt mycell3, mycell4
+%if 1
 	movcell mycell4, myatom5
 	movatom myatom5, mycell5
 	movcell mycell5, myatom6
-	movatom myatom6, quote
+	movatom myatom6, car
+
 	movnxt mycell5, mycell6
+%endif
 	movcell mycell6, myatom7
 	movatom myatom7, mycell7
 	movcell mycell7, myatom8
-	movatom myatom8, msg
+	movatom myatom8, quote
+
+	movnxt mycell7, mycell8
+	
+	movcell mycell8, myatom9
+	movatom myatom9, mycell9
+	movcell mycell9, myatom10
+	
+	movatom myatom10, mycell10
+	movcell mycell10, myatom11
+	movatom myatom11, msg
+	
 	setargs myatom
 	call eval
 	;; call eval
 	SYSEXIT
 
 eval:					;takes atom containing cell and evaluates it
-
-	add ptrword [heldptr], ptrsize 	;go to next avaliable pointer so as to hold arg making it uneffected by called functions
-	mov [heldptr], pax	;pax should always be an atom that is to have it value replaced by the evaluation
-
 	atomhere pax		;set args to first cell of list ([a] b c d) where pax goes from (a b c d) to [a]
 	mov pbx, pax		;move value of pax into pbx
 	cellhere pbx		;gets the atom in list that the function is in
 	;; function must manually go from [a] to [b] in list, thus pax must remain as a cell.
 	macval pbx 		;use macro to call function held by atom held in ebx
-	;; change expression so value is changed
-
-	mov pdx, [heldptr]
-	movatom pdx, pax	;sets value of pdx to whatever function returned
-	;; so for the expression ( (func a b c) d e f) goes to (returnedValue, d e f)
-	sub ptrword [heldptr], ptrsize ;important so next eval gets its proper argpointer to replace with returned value
-
+	;; Always sets pax to returned value
+	ret
+formlist:
+	cmp 
 	ret
 quote:
 	cellnext pax
 	atomhere pax
 	ret
 car:
-
 	cellnext pax		;get arg2 which is a list
 	cellhere pax		;get the list (atom) from its cell
 	setargs pax		;evaluate the list
